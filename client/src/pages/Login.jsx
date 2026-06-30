@@ -1,7 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Footprints, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ParticleField from '../components/ParticleField';
+
+// Helper: load the Google Identity Services script once
+function loadGisScript() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const existing = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (existing) {
+      const check = setInterval(() => {
+        if (window.google?.accounts?.id) { clearInterval(check); resolve(); }
+      }, 100);
+      setTimeout(() => { clearInterval(check); reject(new Error('Timeout loading Google script')); }, 5000);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => {
+      const check = setInterval(() => {
+        if (window.google?.accounts?.id) { clearInterval(check); resolve(); }
+      }, 50);
+      setTimeout(() => { clearInterval(check); reject(new Error('Timeout')); }, 5000);
+    };
+    script.onerror = () => reject(new Error('Failed to load Google Sign-In'));
+    document.head.appendChild(script);
+  });
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,90 +37,77 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const googleInitialized = useRef(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleBtnRef = useRef(null);
 
   const { login, googleLogin, error, setError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/');
+    if (isAuthenticated) navigate('/dashboard');
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     setError(null);
   }, []);
 
+  // Initialize Google Sign-In on mount — renders the real Google button
+  const initGoogle = useCallback(async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') return;
+
+    try {
+      await loadGisScript();
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        // Disable FedCM to avoid the 403 / NetworkError when FedCM is
+        // blocked by browser settings or prior user dismissals.
+        use_fedcm_for_prompt: false,
+        callback: async (response) => {
+          try {
+            setGoogleLoading(true);
+            await googleLogin(response.credential);
+            navigate('/dashboard');
+          } catch (err) {
+            // error is set by context
+          } finally {
+            setGoogleLoading(false);
+          }
+        },
+      });
+
+      // Render the official Google button — this opens a reliable OAuth
+      // popup on click without any FedCM dependency.
+      if (googleBtnRef.current) {
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: googleBtnRef.current.offsetWidth || 360,
+          text: 'continue_with',
+          shape: 'pill',
+        });
+        setGoogleReady(true);
+      }
+    } catch (err) {
+      console.warn('Google Sign-In init failed:', err);
+    }
+  }, [googleLogin, navigate]);
+
+  useEffect(() => {
+    initGoogle();
+  }, [initGoogle]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       await login(email, password, rememberMe);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       // error is set by context
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
-      setError('Google Client ID is not configured. Add your ID to client/.env.local');
-      return;
-    }
-
-    try {
-      setGoogleLoading(true);
-      setError(null);
-
-      // Load the GIS script if not yet loaded
-      if (!window.google?.accounts?.id) {
-        await new Promise((resolve, reject) => {
-          if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
-            const check = setInterval(() => {
-              if (window.google?.accounts?.id) { clearInterval(check); resolve(); }
-            }, 100);
-            setTimeout(() => { clearInterval(check); reject(new Error('Timeout')); }, 5000);
-            return;
-          }
-          const script = document.createElement('script');
-          script.src = 'https://accounts.google.com/gsi/client';
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load Google Sign-In'));
-          document.head.appendChild(script);
-        });
-      }
-
-      // Only initialize once
-      if (!googleInitialized.current) {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          use_fedcm_for_prompt: true,
-          callback: async (response) => {
-            try {
-              await googleLogin(response.credential);
-              navigate('/dashboard');
-            } catch (err) {
-              // error is set by context
-            } finally {
-              setGoogleLoading(false);
-            }
-          },
-        });
-        googleInitialized.current = true;
-      }
-
-      // Trigger the prompt
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setGoogleLoading(false);
-        }
-      });
-    } catch (err) {
-      setError('Failed to initialize Google Sign-In');
-      setGoogleLoading(false);
     }
   };
 
@@ -109,6 +123,7 @@ export default function Login() {
         padding: 20,
       }}
     >
+      <ParticleField />
       {/* Background Orbs */}
       <div
         style={{
@@ -118,8 +133,8 @@ export default function Login() {
           width: 500,
           height: 500,
           borderRadius: '50%',
-          background: '#0F5132',
-          opacity: 0.08,
+          background: 'var(--accent-primary)',
+          opacity: 0.06,
           filter: 'blur(120px)',
           animation: 'float 8s ease-in-out infinite',
           pointerEvents: 'none',
@@ -133,8 +148,8 @@ export default function Login() {
           width: 500,
           height: 500,
           borderRadius: '50%',
-          background: '#198754',
-          opacity: 0.08,
+          background: 'var(--accent-secondary)',
+          opacity: 0.06,
           filter: 'blur(120px)',
           animation: 'float 8s ease-in-out infinite',
           animationDelay: '4s',
@@ -354,52 +369,69 @@ export default function Login() {
             />
           </div>
 
-          {/* Google Sign-In */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
+          {/* Google Sign-In — rendered by Google's GIS library */}
+          <div
             style={{
+              position: 'relative',
               width: '100%',
-              padding: '12px 28px',
-              borderRadius: 12,
-              border: '1px solid var(--glass-border)',
-              background: 'white',
-              cursor: googleLoading ? 'not-allowed' : 'pointer',
+              minHeight: 44,
               display: 'flex',
-              alignItems: 'center',
               justifyContent: 'center',
-              gap: 10,
-              fontSize: 15,
-              fontWeight: 500,
-              fontFamily: 'inherit',
-              color: '#3c4043',
-              transition: 'all 0.2s ease',
-              opacity: googleLoading ? 0.7 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!googleLoading) {
-                e.currentTarget.style.border = '1px solid #d2e3fc';
-                e.currentTarget.style.background = '#f8faff';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.border = '1px solid var(--glass-border)';
-              e.currentTarget.style.background = 'white';
             }}
           >
-            {googleLoading ? (
-              <Loader2 size={20} style={{ animation: 'spin-slow 1s linear infinite', color: '#3c4043' }} />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-              </svg>
+            {!googleReady && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: 12,
+                  border: '1px solid var(--glass-border)',
+                  background: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  fontSize: 15,
+                  fontWeight: 500,
+                  color: '#3c4043',
+                  opacity: 0.6,
+                  zIndex: 2,
+                }}
+              >
+                <Loader2 size={18} style={{ animation: 'spin-slow 1s linear infinite', color: '#3c4043' }} />
+                Loading Google Sign-In...
+              </div>
             )}
-            Continue with Google
-          </button>
+            <div
+              ref={googleBtnRef}
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            />
+          </div>
+
+          {/* Loading overlay when Google auth is in progress */}
+          {googleLoading && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '8px 0',
+                color: 'var(--text-secondary)',
+                fontSize: 14,
+              }}
+            >
+              <Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />
+              Signing in with Google...
+            </div>
+          )}
 
           {/* Signup Link */}
           <p

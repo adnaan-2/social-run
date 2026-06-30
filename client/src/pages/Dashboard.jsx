@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import L from 'leaflet';
+import ParticleField from '../components/ParticleField';
 
 // Fix for default Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -246,7 +247,7 @@ export default function Dashboard() {
         zoomControl: false,
       }).setView([0, 0], 2);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         subdomains: 'abcd',
         maxZoom: 20,
@@ -288,7 +289,7 @@ export default function Dashboard() {
         16
       );
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         subdomains: 'abcd',
         maxZoom: 20,
@@ -735,6 +736,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', position: 'relative' }}>
+      <ParticleField />
       {/* ===== NAVBAR ===== */}
       <nav
         style={{
@@ -743,7 +745,7 @@ export default function Dashboard() {
           left: 0,
           right: 0,
           zIndex: 50,
-          background: 'rgba(255, 255, 255, 0.85)',
+          background: 'rgba(10, 15, 13, 0.85)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderBottom: '1px solid var(--glass-border)',
@@ -1077,9 +1079,9 @@ export default function Dashboard() {
               maxWidth: 500,
               padding: 40,
               textAlign: 'center',
-              boxShadow: '0 0 50px rgba(15, 81, 50, 0.15)',
+              boxShadow: '0 0 50px rgba(0, 212, 170, 0.15)',
               position: 'relative',
-              background: 'white',
+              background: 'var(--bg-secondary)',
             }}
           >
             <button
@@ -1360,7 +1362,7 @@ export default function Dashboard() {
                   justifyContent: 'center',
                   alignItems: 'center',
                   textAlign: 'center',
-                  background: 'rgba(255, 255, 255, 0.4)',
+                  background: 'rgba(0, 0, 0, 0.2)',
                   borderLeft: '1px solid var(--glass-border)',
                 }}
               >
@@ -1546,7 +1548,7 @@ export default function Dashboard() {
                   border: 'none',
                   cursor: 'pointer',
                   color: activeTab === 'nearby' ? 'white' : 'var(--text-secondary)',
-                  background: activeTab === 'nearby' ? 'var(--bg-card)' : 'transparent',
+                  background: activeTab === 'nearby' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                   transition: 'all 0.2s',
                 }}
               >
@@ -1563,7 +1565,7 @@ export default function Dashboard() {
                   border: 'none',
                   cursor: 'pointer',
                   color: activeTab === 'following' ? 'white' : 'var(--text-secondary)',
-                  background: activeTab === 'following' ? 'var(--bg-card)' : 'transparent',
+                  background: activeTab === 'following' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                   transition: 'all 0.2s',
                 }}
               >
@@ -1581,7 +1583,7 @@ export default function Dashboard() {
                   cursor: 'pointer',
                   position: 'relative',
                   color: activeTab === 'invites' ? 'white' : 'var(--text-secondary)',
-                  background: activeTab === 'invites' ? 'var(--bg-card)' : 'transparent',
+                  background: activeTab === 'invites' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                   transition: 'all 0.2s',
                 }}
               >

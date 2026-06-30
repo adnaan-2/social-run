@@ -3,22 +3,22 @@
 
 
 :root {
-  --bg-primary: #F9F8F3;
-  --bg-secondary: #F0EFEA;
-  --bg-card: #FFFFFF;
-  --bg-card-hover: #F2F1EC;
-  --accent-primary: #0F5132;
-  --accent-secondary: #198754;
-  --accent-gradient: linear-gradient(135deg, #0F5132 0%, #198754 100%);
-  --text-primary: #000000;
-  --text-secondary: #333333;
-  --text-muted: #666666;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-border-hover: rgba(0, 0, 0, 0.15);
+  --bg-primary: #0A0F0D;
+  --bg-secondary: #0D1411;
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  --accent-primary: #00D4AA;
+  --accent-secondary: #00B894;
+  --accent-gradient: linear-gradient(135deg, #00D4AA 0%, #00B894 100%);
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --glass-bg: rgba(10, 15, 13, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(0, 212, 170, 0.25);
   --danger: #ef4444;
-  --success: #198754;
-  --warning: #f59e0b;
+  --success: #00D4AA;
+  --warning: #fbbf24;
 }
 
 * {
@@ -51,8 +51,8 @@ body {
 
 .btn-primary {
   background: var(--accent-gradient);
-  color: white;
-  font-weight: 600;
+  color: #0A0F0D;
+  font-weight: 700;
   border-radius: 12px;
   padding: 12px 28px;
   border: none;
@@ -78,9 +78,9 @@ body {
 }
 
 .btn-secondary {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   border-radius: 12px;
   padding: 12px 28px;
   cursor: pointer;
@@ -90,16 +90,16 @@ body {
 }
 
 .btn-secondary:hover {
-  border-color: var(--glass-border-hover);
-  background: var(--bg-card);
+  border-color: rgba(0, 212, 170, 0.3);
+  background: rgba(0, 212, 170, 0.06);
 }
 
 .input-field {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 14px 16px;
-  color: var(--text-primary);
+  color: #ffffff;
   width: 100%;
   font-size: 15px;
   transition: all 0.3s ease;
